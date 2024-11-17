@@ -5,16 +5,18 @@ const cors = require('cors');
 const app = express();
 const port = 3000;
 
+// 使用CORS中间件
 app.use(cors());
 
 const fetchGitHubData = async (req, res) => {
-    const apiUrl = `https://api.github.com${req.originalUrl}`;
-    const currentHost = `${req.protocol}://${req.get('host')}`;
+    const apiUrl = `https://api.github.com${req.originalUrl.replace('/github', '') || '/'}`;
 
     try {
         const response = await axios.get(apiUrl, {
             headers: {
                 'User-Agent': 'Request-Promise',
+                // 可选：使用 GitHub 令牌
+                //'Authorization': `token your_github_token`,
             },
         });
 
@@ -22,13 +24,16 @@ const fetchGitHubData = async (req, res) => {
         const apiHostPattern = /https?:\/\/api.github.com/g;
         responseData = responseData.replace(apiHostPattern, currentHost);
 
-        res.json(JSON.parse(responseData));
+        res.json(response.data);
     } catch (error) {
-        res.status(500).send(error.message);
+        console.error('Error fetching data from GitHub:', error.message);
+        res.status(500).json({ error: error.message });
     }
 };
 
-app.use('/', fetchGitHubData);
+// 合并路径处理
+app.use('/github/*', fetchGitHubData);
+app.use('/github', fetchGitHubData);
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
